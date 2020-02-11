@@ -1,0 +1,158 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{% block title %} Distrito {% endblock %}</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+          integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.1/css/all.css"
+          integrity="sha384-50oBUHEmvpQ+1lW4y57PTFmhCaXp0ML5d60M1M7uH2+nqUivzIebhndOJK28anvf" crossorigin="anonymous">
+    <link rel="stylesheet" href="{% static 'base.css' %}">
+    <link href="{% static 'font-awesome/css/font-awesome.css' %}" rel="stylesheet">
+
+</head>
+{% include "base.html" %}
+{% block content %}
+    <body>
+    <div class="container">
+        <br>
+        <div class="row">
+            <div class="col-md-9">
+                <h1>Listado de distritos</h1>
+            </div>
+            <div class="col-md-3">
+                <a class="float-right" href="{% url 'add_district' %}">
+                    <button type="button" class="btn btn-success">Agregar</button>
+                </a>
+            </div>
+        </div>
+        <br>
+        <div class="row">
+            <div class="col-md-12">
+                <table class="table table-striped" id="datos">
+                    <thead>
+                    <tr>
+                        <th scope="col">Acrónimo</th>
+                        <th scope="col">Nombre</th>
+                        <td Scope="col"> </td>
+                        <td scope="col"> </td>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for cli in object_list %}
+                        <tr>
+                            <td>{{ cli.acronym }}</td>
+                            <td>{{ cli.name }}</td>
+                            <td>
+                                <a href="{% url 'edit_district' cli.pk %}">
+                                    <button type="button" class="btn btn-primary">Editar</button>
+                                </a>
+                            </td>
+                            <td>
+                                    <button type="button"  class="btn btn-primary" data-pk="{{ cli.pk }}" data-toggle="modal"
+                                    data-target="#modal_{{ cli.pk }}">
+                                        Eliminar
+                                    </button>
+    
+                                    <!-- Modal -->
+                                    <div class="modal fade" id="modal_{{ cli.pk }}" tabindex="-1" role="dialog"
+                                        aria-labelledby="exampleModalCenterTitle" aria-hidden="true">
+                                        <div class="modal-dialog modal-dialog-centered" role="document">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title" id="exampleModalCenterTitle">Confirmación de
+                                                        eliminación</h5>
+                                                    <button type="button" class="close" data-dismiss="modal"
+                                                        aria-label="Close">
+                                                        <span aria-hidden="true">&times;</span>
+                                                    </button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    Estas seguro que deseas eliminar de forma permanente este distrito.
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary"
+                                                        data-dismiss="modal">Volver</button>
+                                                    <button id="confirmar_eliminacion_{{cli.pk}}" data-pk="{{ cli.pk }}" type="button" 
+                                                    class = 'confirmar_eliminacion btn btn-primary'>Aceptar</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+
+                    </tbody>
+                </table>
+                <div class="row">
+                    {% if object_list_acquisition.has_next or object_list_acquisition.has_previous %}
+                        <nav aria-label="Page navigation example">
+                            <ul class="pagination justify-content-center">
+                                {% if object_list_acquisition.has_previous %}
+                                    <li class="page-item"><a class="page-link"
+                                                             href="?page={{ object_list_acquisition.previous_page_number }}">Previous</a>
+                                    </li>
+                                {% endif %}
+
+                                {% for page in object_list_acquisition.paginator.page_range %}
+                                    <li class="page-item {% if object_list_acquisition.number == page %}active{% endif %}">
+                                        <a
+                                                class="page-link" href="?page={{ page }}">{{ page }}</a></li>
+                                {% endfor %}
+
+                                {% if object_list_acquisition.has_next %}
+                                    <li class="page-item"><a class="page-link"
+                                                             href="?page={{ object_list_acquisition.next_page_number }}">Next</a>
+                                    </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    </body>
+{% endblock content %}
+<script src="{% static 'js/inspinia.js' %}"></script>
+<script src="{% static 'js/plugins/pace/pace.min.js' %}"></script>
+<script src="{% static 'js/plugins/sweetalert2/sweetalert2.all.min.js' %}"></script>
+
+<script>
+    $(document).ready(function () {
+        $(".confirmar_eliminacion").on('click', function () {
+            $.ajax({
+                url: '{% url "delete_district"%}',
+                type: 'POST',
+                data: {
+                    'pk': $(this).data('pk'),
+                    'valor': "True",
+                    'csrfmiddlewaretoken': '{{ csrf_token}}'
+                },
+                success: function (data) {
+                    if (data.result){
+                        window.location.href = "{% url 'list_district' %}"
+                    }
+                    else{
+                        swal({
+                            type: 'error',
+                            text: 'El distrito no se eliminó',
+                        }).then(function(){
+                            window.location = "{% url 'list_district' %}"
+                        });
+                    }
+                },
+                error: function () {
+                    swal({
+                            type: 'error',
+                            text: 'El distrito no se eliminó, debido a que se encuentra relacionado con alguna propiedad',
+                        }).then(function(){
+                            window.location = "{% url 'list_district' %}"
+                        });
+                }
+            });
+        })
+    });
+</script>
+</html>
